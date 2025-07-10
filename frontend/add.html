@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Unos Artikla</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    #goto {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    .container {
+      background-color: #fff;
+      padding: 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      width: 320px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+      color: #333;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 10px;
+      background-color: #28a745;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button[type="submit"]:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+<body>
+
+  <button id="goto" onclick="location.href='index.html'">📄 Pogledaj artikle</button>
+
+  <div class="container">
+    <h2>Dodaj Artikal</h2>
+
+      <label for="kategorija">Kategorija</label>
+      <select name="kategorija" id="kategorija" required>
+        <option value="">-- Odaberi kategoriju --</option>
+      </select>
+
+    <form id="addForm">
+
+      <label for="proizvodjac">Proizvođač (opcionalno)</label>
+      <select name="proizvodjac" id="proizvodjac">
+        <option value="">-- Nepoznat --</option>
+      </select>
+
+      <label for="naziv">Naziv</label>
+      <input type="text" id="naziv" name="naziv" required />
+
+      <label for="cijena">Cijena</label>
+      <input type="number" id="cijena" name="cijena" step="0.01" required />
+
+      <label for="lokacija">lokacija</label>
+      <select name="lokacija" id="lokacija">
+        <option value="0">--Odaberite loakciju--</option>
+
+        <option value="1">Teslić</option>
+        <option value="2">Tešanj</option>
+        <option value="3">Sarajevo</option>
+        <option value="4">Zenica</option>
+        <option value="5">Bijeljina</option>
+        <option value="6">Mostar</option>
+        <option value="7">Gradiška</option>
+        <option value="8">Velika Kladuša</option>
+      </select>
+
+      <button type="submit">Dodaj</button>
+
+      <div id="poruka" style="margin-top: 15px; text-align: center; color: green;"></div>
+
+    </form>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const form = document.getElementById("addForm");
+
+      fetch("http://127.0.0.1:5000/kategorije")
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById("kategorija");
+          data.forEach(k => {
+            const option = document.createElement("option");
+            option.value = k.id;
+            option.textContent = k.naziv;
+            select.appendChild(option);
+          });
+        });
+
+      fetch("http://127.0.0.1:5000/proizvodjaci")
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById("proizvodjac");
+          data.forEach(p => {
+            const option = document.createElement("option");
+            option.value = p.id;
+            option.textContent = p.naziv;
+            select.appendChild(option);
+          });
+        });
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        const naziv = document.getElementById("naziv").value.trim();
+        const kategorija = document.getElementById("kategorija").value;
+        const proizvodjac = document.getElementById("proizvodjac").value || null;
+        const cijena = parseFloat(document.getElementById("cijena").value);
+
+        if (!naziv || !kategorija || isNaN(cijena)) {
+          alert("Sva obavezna polja moraju biti popunjena!");
+          return;
+        }
+
+        fetch("http://127.0.0.1:5000/unos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            naziv,
+            kategorija,
+            cijena,
+            proizvodjac_id: proizvodjac
+          })
+        })
+          .then(res => res.json())
+          .then(data => {
+            document.getElementById("poruka").textContent = data.msg || "Artikal uspješno dodan!";
+            form.reset();
+            setTimeout(() => {
+              document.getElementById("poruka").textContent = "";
+            }, 4000);
+
+          })
+          .catch(err => {
+            console.error("Greška:", err);
+            alert("Greška pri unosu!");
+          });
+      });
+    });
+  </script>
+</body>
+</html>
