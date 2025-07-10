@@ -1,23 +1,20 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_bcrypt import Bcrypt
 import mysql.connector
 import os
-import traceback
+import jwt
+import datetime
 from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
 
-# Učitaj .env varijable
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "tajna_lozinka")
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'moja_tajna_kljuc')
 
-# ✅ PRAVILAN CORS setup - samo jedan poziv!
+# Dozvoli CORS samo za frontend origin
 CORS(app, resources={r"/*": {"origins": ["http://127.0.0.1:5500"]}}, supports_credentials=True)
 
-bcrypt = Bcrypt(app)
-
-# Konfiguracija baze
 db_config = {
     'host': os.getenv('DB_HOST', '185.202.236.69'),
     'user': os.getenv('DB_USER', 'aniel'),
@@ -26,11 +23,61 @@ db_config = {
 }
 
 def get_db_connection():
+    return mysql.connector.connect(**db_config)
+
+def token_required(f):
+    from functools import wraps
+    def verify_token(token):
+        try:
+            decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            return decoded['user_id']
+        except Exception:
+            return None
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            parts = auth_header.split()
+            if len(parts) == 2 and parts[0] == 'Bearer':
+                token = parts[1]
+        if not token:
+            return jsonify({'msg': 'Token nije pronađen!', 'status': 'error'}), 401
+
+        user_id = verify_token(token)
+        if not user_id:
+            return jsonify({'msg': 'Nevažeći token!', 'status': 'error'}), 401
+
+        return f(user_id, *args, **kwargs)
+    return decorated
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({'msg': 'Sva polja su obavezna!', 'status': 'error'}), 400
+
     try:
-        return mysql.connector.connect(**db_config)
-    except mysql.connector.Error as err:
-        print(f"Greška prilikom konekcije: {err}")
-        raise
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM korisnici WHERE email=%s", (email,))
+        if cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({'msg': 'Korisnik već postoji!', 'status': 'error'}), 409
+
+        hashed_pw = generate_password_hash(password)
+        cursor.execute("INSERT INTO korisnici (email, password) VALUES (%s, %s)", (email, hashed_pw))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'msg': 'Registracija uspješna!', 'status': 'success'}), 201
+    except Exception as e:
+        return jsonify({'msg': 'Greška na serveru', 'status': 'error'}), 500
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -44,62 +91,33 @@ def login():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM korisnici WHERE email = %s", (email,))
+        cursor.execute("SELECT * FROM korisnici WHERE email=%s", (email,))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
 
-        if user and bcrypt.check_password_hash(user['password'], password):
-            session['user_id'] = user['id']
-            return jsonify({'msg': 'Login uspješan', 'status': 'success', 'redirect': '/oprema'}), 200
+        if user and check_password_hash(user['password'], password):
+            token = jwt.encode({
+                'user_id': user['id'],
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=12)
+            }, app.config['SECRET_KEY'], algorithm="HS256")
+
+            return jsonify({'msg': 'Login uspješan', 'status': 'success', 'token': token}), 200
         else:
             return jsonify({'msg': 'Pogrešan email ili lozinka', 'status': 'error'}), 401
-    except mysql.connector.Error as err:
-        return jsonify({'msg': f'Database error: {str(err)}', 'status': 'error'}), 500
 
-@app.route('/signup', methods=['POST'])
-def signup():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-
-    if not email or not password:
-        return jsonify({'msg': 'Sva polja su obavezna!', 'status': 'error'}), 400
-
-    if '@' not in email or '.' not in email:
-        return jsonify({'msg': 'Nevažeći email format!', 'status': 'error'}), 400
-
-    if len(password) < 6:
-        return jsonify({'msg': 'Lozinka mora imati najmanje 6 karaktera!', 'status': 'error'}), 400
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM korisnici WHERE email = %s", (email,))
-        if cursor.fetchone():
-            cursor.close()
-            conn.close()
-            return jsonify({'msg': 'Korisnik već postoji!', 'status': 'error'}), 409
-
-        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        cursor.execute("INSERT INTO korisnici (email, password) VALUES (%s, %s)", (email, hashed_password))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return jsonify({'msg': 'Registracija uspješna!', 'status': 'success'}), 201
-    except mysql.connector.Error as err:
-        return jsonify({'msg': f'Database error: {str(err)}', 'status': 'error'}), 500
+    except Exception as e:
+        return jsonify({'msg': 'Greška na serveru', 'status': 'error'}), 500
 
 @app.route('/logout', methods=['POST'])
-def logout():
-    session.pop('user_id', None)
-    return jsonify({'status': 'success'}), 200
+@token_required
+def logout(user_id):
+    # Kod JWT logout se obično radi samo na frontend strani (brisanje tokena)
+    return jsonify({'msg': 'Odjava uspješna', 'status': 'success'}), 200
 
 @app.route('/unos', methods=['POST'])
-def unos_artikla():
-    if 'user_id' not in session:
-        return jsonify({'msg': 'Morate biti prijavljeni!', 'status': 'error'}), 401
-
+@token_required
+def unos_artikla(user_id):
     data = request.get_json()
     naziv = data.get('naziv')
     kategorija_id = data.get('kategorija')
@@ -107,49 +125,23 @@ def unos_artikla():
     lokacije_id = data.get('lokacije_id')
     cijena = data.get('cijena')
 
-    if not naziv or not kategorija_id or cijena is None or not lokacije_id:
+    if not naziv or not kategorija_id or not lokacije_id or cijena is None:
         return jsonify({'msg': 'Sva obavezna polja moraju biti popunjena!', 'status': 'error'}), 400
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        query = """
-            INSERT INTO oprema (naziv, cijena, kategorija_id, proizvodjac_id, lokacije_id, datum_objave)
-            VALUES (%s, %s, %s, %s, %s, NOW())
-        """
-        cursor.execute(query, (naziv, cijena, kategorija_id, proizvodjac_id, lokacije_id))
+        cursor.execute(
+            """INSERT INTO oprema (naziv, cijena, kategorija_id, proizvodjac_id, lokacije_id, datum_objave)
+               VALUES (%s, %s, %s, %s, %s, NOW())""",
+            (naziv, cijena, kategorija_id, proizvodjac_id, lokacije_id)
+        )
         conn.commit()
         cursor.close()
         conn.close()
         return jsonify({'msg': 'Artikal uspješno dodan!', 'status': 'success'}), 201
-    except mysql.connector.Error as err:
-        return jsonify({'msg': f'Database error: {str(err)}', 'status': 'error'}), 500
-
-@app.route('/lokacije', methods=['GET'])
-def get_lokacije():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id, naziv FROM lokacije ORDER BY naziv")
-        data = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return jsonify({'data': data, 'status': 'success'}), 200
-    except mysql.connector.Error as err:
-        return jsonify({'msg': f'Database error: {str(err)}', 'status': 'error'}), 500
-
-@app.route('/proizvodjaci', methods=['GET'])
-def get_proizvodjaci():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id, naziv FROM proizvodjac ORDER BY naziv")
-        data = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return jsonify({'data': data, 'status': 'success'}), 200
-    except mysql.connector.Error as err:
-        return jsonify({'msg': f'Database error: {str(err)}', 'status': 'error'}), 500
+    except Exception as e:
+        return jsonify({'msg': 'Greška pri unosu u bazu', 'status': 'error'}), 500
 
 @app.route('/kategorije', methods=['GET'])
 def get_kategorije():
@@ -161,72 +153,61 @@ def get_kategorije():
         cursor.close()
         conn.close()
         return jsonify({'data': data, 'status': 'success'}), 200
-    except mysql.connector.Error as err:
-        return jsonify({'msg': f'Database error: {str(err)}', 'status': 'error'}), 500
+    except Exception:
+        return jsonify({'msg': 'Greška pri dohvaćanju kategorija', 'status': 'error'}), 500
 
-@app.route('/oprema', methods=['GET'])
-def get_dijelovi():
-    naziv = request.args.get('naziv', '')
-    kategorija_naziv = request.args.get('kategorija', '')
-    cijena_min = request.args.get('cijena_min', type=float)
-    cijena_max = request.args.get('cijena_max', type=float)
-    sort = request.args.get('sort', '')
-    order = request.args.get('order', 'asc')
-    lokacije_id = request.args.get('lokacije_id', type=int)
-
-    # Dozvoljena sortiranja
-    sort_map = {
-        'cijena': 'o.cijena',
-        'datum_objave': 'o.datum_objave'
-    }
-    allowed_order = ['asc', 'desc']
-    sort_field = sort_map.get(sort, 'o.id')  # Default: sortiranje po ID-u
-    order = order if order in allowed_order else 'asc'
-
-    query = """
-        SELECT 
-            o.id,
-            CONCAT_WS(' ', p.naziv, o.naziv) AS naziv,
-            IFNULL(o.cijena, 0) AS cijena,
-            k.naziv AS kategorija,
-            o.datum_objave,
-            l.naziv AS lokacija
-        FROM oprema o
-        JOIN kategorija k ON o.kategorija_id = k.id
-        LEFT JOIN proizvodjac p ON o.proizvodjac_id = p.id
-        LEFT JOIN lokacije l ON o.lokacije_id = l.id
-        WHERE 1=1
-    """
-    params = []
-
-    if naziv:
-        query += " AND LOWER(CONCAT_WS(' ', p.naziv, o.naziv)) LIKE %s"
-        params.append(f"%{naziv.lower()}%")
-    if kategorija_naziv:
-        query += " AND k.naziv = %s"
-        params.append(kategorija_naziv)
-    if cijena_min is not None:
-        query += " AND o.cijena >= %s"
-        params.append(cijena_min)
-    if cijena_max is not None:
-        query += " AND o.cijena <= %s"
-        params.append(cijena_max)
-    if lokacije_id:
-        query += " AND o.lokacije_id = %s"
-        params.append(lokacije_id)
-
-    query += f" ORDER BY {sort_field} {order}"
-
+@app.route('/proizvodjaci', methods=['GET'])
+def get_proizvodjaci():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute(query, params)
-        result = cursor.fetchall()
+        cursor.execute("SELECT id, naziv FROM proizvodjac ORDER BY naziv")
+        data = cursor.fetchall()
         cursor.close()
         conn.close()
-        return jsonify({'data': result, 'status': 'success'}), 200
-    except mysql.connector.Error as err:
-        return jsonify({'msg': f'Database error: {str(err)}', 'status': 'error'}), 500
+        return jsonify({'data': data, 'status': 'success'}), 200
+    except Exception:
+        return jsonify({'msg': 'Greška pri dohvaćanju proizvođača', 'status': 'error'}), 500
 
-if __name__ == '__main__':
-    app.run(debug=False, port=5000)
+@app.route('/lokacije', methods=['GET'])
+def get_lokacije():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, naziv FROM lokacije ORDER BY naziv")
+        data = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify({'data': data, 'status': 'success'}), 200
+    except Exception:
+        return jsonify({'msg': 'Greška pri dohvaćanju lokacija', 'status': 'error'}), 500
+
+@app.route('/oprema', methods=['GET'])
+def get_oprema():
+    # Ovo možeš nadograditi kasnije po filtrima
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT o.id,
+                   CONCAT_WS(' ', p.naziv, o.naziv) AS naziv,
+                   o.cijena,
+                   k.naziv AS kategorija,
+                   l.naziv AS lokacija,
+                   o.datum_objave
+            FROM oprema o
+            LEFT JOIN proizvodjac p ON o.proizvodjac_id = p.id
+            LEFT JOIN kategorija k ON o.kategorija_id = k.id
+            LEFT JOIN lokacije l ON o.lokacije_id = l.id
+            ORDER BY o.id DESC
+        """)
+        data = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify({'data': data, 'status': 'success'}), 200
+    except Exception:
+        return jsonify({'msg': 'Greška pri dohvaćanju opreme', 'status': 'error'}), 500
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)

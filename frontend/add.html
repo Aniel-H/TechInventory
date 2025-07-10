@@ -122,70 +122,97 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-      const form = document.getElementById("addForm");
+  const form = document.getElementById("addForm");
 
-      fetch("http://127.0.0.1:5000/kategorije")
-        .then(res => res.json())
-        .then(data => {
-          const select = document.getElementById("kategorija");
-          data.forEach(k => {
-            const option = document.createElement("option");
-            option.value = k.id;
-            option.textContent = k.naziv;
-            select.appendChild(option);
-          });
-        });
+  // Autentifikacija: ako token ne postoji, vrati korisnika
+  const token = localStorage.getItem("auth_token");
+  if (!token) {
+    window.location.href = "login.html";
+    return;
+  }
 
-      fetch("http://127.0.0.1:5000/proizvodjaci")
-        .then(res => res.json())
-        .then(data => {
-          const select = document.getElementById("proizvodjac");
-          data.forEach(p => {
-            const option = document.createElement("option");
-            option.value = p.id;
-            option.textContent = p.naziv;
-            select.appendChild(option);
-          });
-        });
-
-      form.addEventListener("submit", function (event) {
-        event.preventDefault();
-
-        const naziv = document.getElementById("naziv").value.trim();
-        const kategorija = document.getElementById("kategorija").value;
-        const proizvodjac = document.getElementById("proizvodjac").value || null;
-        const cijena = parseFloat(document.getElementById("cijena").value);
-
-        if (!naziv || !kategorija || isNaN(cijena)) {
-          alert("Sva obavezna polja moraju biti popunjena!");
-          return;
-        }
-
-        fetch("http://127.0.0.1:5000/unos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            naziv,
-            kategorija,
-            cijena,
-            proizvodjac_id: proizvodjac
-          })
-        })
-          .then(res => res.json())
-          .then(data => {
-            document.getElementById("poruka").textContent = data.msg || "Artikal uspješno dodan!";
-            form.reset();
-            setTimeout(() => {
-              document.getElementById("poruka").textContent = "";
-            }, 4000);
-
-          })
-          .catch(err => {
-            console.error("Greška:", err);
-            alert("Greška pri unosu!");
-          });
+  // Učitaj kategorije
+  fetch("http://127.0.0.1:5000/kategorije")
+    .then(res => res.json())
+    .then(data => {
+      const select = document.getElementById("kategorija");
+      data.data.forEach(k => {
+        const option = document.createElement("option");
+        option.value = k.id;
+        option.textContent = k.naziv;
+        select.appendChild(option);
       });
     });
+
+  // Učitaj proizvođače
+  fetch("http://127.0.0.1:5000/proizvodjaci")
+    .then(res => res.json())
+    .then(data => {
+      const select = document.getElementById("proizvodjac");
+      data.data.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.textContent = p.naziv;
+        select.appendChild(option);
+      });
+    });
+
+  // Učitaj lokacije
+  fetch("http://127.0.0.1:5000/lokacije")
+    .then(res => res.json())
+    .then(data => {
+      const select = document.getElementById("lokacija");
+      data.data.forEach(lok => {
+        const option = document.createElement("option");
+        option.value = lok.id;
+        option.textContent = lok.naziv;
+        select.appendChild(option);
+      });
+    });
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    const naziv = document.getElementById("naziv").value.trim();
+    const kategorija = document.getElementById("kategorija").value;
+    const proizvodjac = document.getElementById("proizvodjac").value || null;
+    const lokacije_id = document.getElementById("lokacija").value;
+    const cijena = parseFloat(document.getElementById("cijena").value);
+
+    if (!naziv || !kategorija || !lokacije_id || isNaN(cijena)) {
+      alert("Sva obavezna polja moraju biti popunjena!");
+      return;
+    }
+
+    fetch("http://127.0.0.1:5000/unos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify({
+        naziv,
+        kategorija,
+        cijena,
+        proizvodjac_id: proizvodjac,
+        lokacije_id
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("poruka").textContent = data.msg || "Artikal uspješno dodan!";
+        form.reset();
+        setTimeout(() => {
+          document.getElementById("poruka").textContent = "";
+        }, 4000);
+      })
+      .catch(err => {
+        console.error("Greška:", err);
+        alert("Greška pri unosu!");
+      });
+  });
+});
+
   </script>
 </body>
 </html>
