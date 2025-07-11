@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style/style.css">
+</head>
+<body>
+    <header class="bg-primary text-white p-3">
+        <div class="container">
+            <h1>Inventar</h1>
+            <nav>
+                <a href="add.html" class="text-white me-3">Dodaj Artikal</a>
+                <a href="#" id="logoutLink" class="text-white">Odjava</a>
+            </nav>
+        </div>
+    </header>
+    <main class="container mt-4">
+        <h2>Oprema</h2>
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <select id="kategorijaFilter" class="form-select">
+                    <option value="">🔽 Sve kategorije</option>
+                    <!-- Popunjava se dinamički -->
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select id="lokacijaFilter" class="form-select">
+                    <option value="">📍 Sve lokacije</option>
+                    <!-- Popunjava se dinamički -->
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select id="sortFilter" class="form-select">
+                    <option value="cijena_asc">Cijena (najniža)</option>
+                    <option value="cijena_desc">Cijena (najviša)</option>
+                    <option value="datum_objave_desc">Najnovije</option>
+                    <option value="datum_objave_asc">Najstarije</option>
+                </select>
+            </div>
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Naziv</th>
+                    <th>Kategorija</th>
+                    <th>Cijena</th>
+                    <th>Lokacija</th>
+                </tr>
+            </thead>
+            <tbody id="opremaTable">
+                <!-- Popunjava se dinamički -->
+            </tbody>
+        </table>
+        <div class="d-flex justify-content-between">
+            <a href="add.html" class="btn btn-primary">Dodaj Artikal</a>
+            <button id="themeToggle" class="btn btn-secondary">🌙 Tema</button>
+        </div>
+    </main>
+    <script src="script/script.js"></script>
+</body>
+</html>
