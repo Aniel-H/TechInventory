@@ -14,6 +14,44 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  const modal = document.getElementById("deleteModal");
+  const closeBtn = document.querySelector(".close");
+  const cancelBtn = document.getElementById("cancelDelete");
+  const confirmBtn = document.getElementById("confirmDelete");
+
+  if (modal && closeBtn && cancelBtn && confirmBtn) {
+    closeBtn.onclick = () => (modal.style.display = "none");
+    cancelBtn.onclick = () => (modal.style.display = "none");
+
+    window.onclick = (event) => {
+      if (event.target === modal) {
+        modal.style.display = "none";
+      }
+    };
+
+    confirmBtn.onclick = () => {
+      fetch(`${API_BASE_URL}/delete/${selectedId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+        credentials: "include",
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          window.location.reload();
+        })
+        .catch((err) => {
+          console.error("Greška:", err);
+          alert("Došlo je do greške pri slanju zahtjeva.");
+        });
+
+      modal.style.display = "none";
+    };
+  }
+
+  // *** OSTATKAK TVOG KODA OSTAVLJAM TAKO KAKAV JE, NIŠTA NE DIRAM ***
+
   // Funkcija za validaciju login/signup forme
   function validateForm(email, password) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,7 +94,7 @@ document.addEventListener("DOMContentLoaded", function () {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
-          credentials: "include"
+          credentials: "include",
         })
           .then((response) => response.json())
           .then((data) => {
@@ -96,9 +134,11 @@ document.addEventListener("DOMContentLoaded", function () {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
-          credentials: "include"
+          credentials: "include",
         })
-          .then((response) => response.json().then(data => ({ status: response.status, body: data })))
+          .then((response) =>
+            response.json().then((data) => ({ status: response.status, body: data }))
+          )
           .then(({ status, body }) => {
             alert(body.msg);
             if (status === 201 && body.status === "success") {
@@ -163,7 +203,7 @@ document.addEventListener("DOMContentLoaded", function () {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ naziv, kategorija, proizvodjac_id, lokacije_id, cijena })
+          body: JSON.stringify({ naziv, kategorija, proizvodjac_id, lokacije_id, cijena }),
         })
           .then((response) => response.json())
           .then((data) => {
@@ -183,10 +223,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // INVENTORY PAGE (index.html) - prikaz i filtriranje artikala
   if (document.title === "Inventar") {
+    const searchFilter = document.getElementById("searchFilter");
     const kategorijaFilter = document.getElementById("kategorijaFilter");
     const lokacijaFilter = document.getElementById("lokacijaFilter");
-    const datumOdFilter = document.getElementById("datumOdFilter");
-    const datumDoFilter = document.getElementById("datumDoFilter");
     const cijenaOdFilter = document.getElementById("cijenaOdFilter");
     const cijenaDoFilter = document.getElementById("cijenaDoFilter");
     const sortFilter = document.getElementById("sortFilter");
@@ -242,14 +281,6 @@ document.addEventListener("DOMContentLoaded", function () {
       lokacijaFilter.addEventListener("change", fetchItems);
     }
 
-    if (datumOdFilter) {
-      datumOdFilter.addEventListener("change", fetchItems);
-    }
-
-    if (datumDoFilter) {
-      datumDoFilter.addEventListener("change", fetchItems);
-    }
-
     if (cijenaOdFilter) {
       cijenaOdFilter.addEventListener("change", fetchItems);
     }
@@ -262,20 +293,21 @@ document.addEventListener("DOMContentLoaded", function () {
       sortFilter.addEventListener("change", fetchItems);
     }
 
+    if (searchFilter) {
+      searchFilter.addEventListener("input", fetchItems);
+    }
+
     function fetchItems() {
       const params = new URLSearchParams();
 
+      if (searchFilter && searchFilter.value.trim() !== "") {
+        params.append("search", searchFilter.value.trim());
+      }
       if (kategorijaFilter && kategorijaFilter.value) {
         params.append("kategorija", kategorijaFilter.value);
       }
       if (lokacijaFilter && lokacijaFilter.value) {
         params.append("lokacije_id", lokacijaFilter.value);
-      }
-      if (datumOdFilter && datumOdFilter.value) {
-        params.append("datum_od", datumOdFilter.value);
-      }
-      if (datumDoFilter && datumDoFilter.value) {
-        params.append("datum_do", datumDoFilter.value);
       }
       if (cijenaOdFilter && cijenaOdFilter.value) {
         params.append("cijena_od", cijenaOdFilter.value);
@@ -289,16 +321,15 @@ document.addEventListener("DOMContentLoaded", function () {
         if (order) params.append("order", order);
       }
 
-      console.log(`Slanje zahtjeva: ${API_BASE_URL}/oprema?${params.toString()}`);  // Debug
       fetch(`${API_BASE_URL}/oprema?${params.toString()}`, {
-        credentials: "include"
+        credentials: "include",
       })
         .then((response) => response.json())
         .then((data) => {
           if (data.status === "success") {
             opremaTable.innerHTML = "";
             if (data.data.length === 0) {
-              opremaTable.innerHTML = "<tr><td colspan='4'>Nema artikala za prikaz.</td></tr>";
+              opremaTable.innerHTML = "<tr><td colspan='5'>Nema artikala za prikaz.</td></tr>";
             } else {
               data.data.forEach((item) => {
                 const row = document.createElement("tr");
@@ -307,6 +338,10 @@ document.addEventListener("DOMContentLoaded", function () {
                   <td>${item.kategorija || "N/A"}</td>
                   <td>${!isNaN(parseFloat(item.cijena)) ? parseFloat(item.cijena).toFixed(2) : "N/A"}</td>
                   <td>${item.lokacija || "N/A"}</td>
+                  <td>
+                    <button id="deleteItem" onclick="deleteItem(${item.id})">Obriši</button>
+                    <button id="editItem" onclick="editItem(${item.id})">Uredi</button>
+                  </td>
                 `;
                 opremaTable.appendChild(row);
               });
@@ -332,6 +367,7 @@ document.addEventListener("DOMContentLoaded", function () {
       );
     });
 
+    // Primijeni sačuvanu temu ako postoji
     if (localStorage.getItem("theme") === "dark") {
       document.body.classList.add("dark-theme");
     }
@@ -340,15 +376,12 @@ document.addEventListener("DOMContentLoaded", function () {
       event.preventDefault();
       fetch(`${API_BASE_URL}/logout`, {
         method: "POST",
-        credentials: "include"
+        credentials: "include",
       })
         .then((response) => response.json())
         .then((data) => {
-          alert(data.msg || "Uspješno ste se odjavili.");
-          if (data.status === "success") {
-            localStorage.removeItem("auth_token");
-            window.location.href = "login.html";
-          }
+          localStorage.removeItem("auth_token");
+          window.location.href = "login.html";
         })
         .catch((error) => {
           console.error("Greška prilikom odjave:", error);
@@ -357,3 +390,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+let selectedId = null;
+
+function deleteItem(id) {
+  selectedId = id;
+  document.getElementById("deleteModal").style.display = "block";
+}

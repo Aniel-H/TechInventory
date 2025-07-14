@@ -1,25 +1,38 @@
 <!DOCTYPE html>
 <html lang="bs">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Inventar</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="style/style.css" />
 </head>
 <body>
-    <header class="bg-primary text-white p-3">
-        <div class="container">
-            <h1>Inventar</h1>
-            <nav>
-                <a href="add.html" class="text-white me-3">Dodaj Artikal</a>
-                <a href="#" id="logoutLink" class="text-white">Odjava</a>
+    <header class="bg-primary text-white py-3 mb-4">
+        <div class="container d-flex justify-content-between align-items-center flex-wrap">
+            <h1 class="mb-0">Inventar</h1>
+            <nav class="d-flex gap-3 align-items-center mt-2 mt-md-0">
+                <a href="add.html" class="btn btn-outline-light">Dodaj Artikal</a>
+                <button id="themeToggle" class="btn btn-light text-primary">Tema</button>
+                <a href="#" id="logoutLink" class="btn btn-outline-light">Odjava</a>
             </nav>
         </div>
     </header>
-    <main class="container mt-4">
-        <h2>Oprema</h2>
-        <div class="row mb-3">
+
+    <main class="container">
+        <h2 class="mb-4">Oprema</h2>
+
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <input
+                    type="text"
+                    id="searchFilter"
+                    class="form-control"
+                    placeholder="Pretraži po nazivu ili modelu..."
+                    autocomplete="off"
+                />
+            </div>
+
             <div class="col-md-4">
                 <select id="kategorijaFilter" class="form-select">
                     <option value="">🔽 Sve kategorije</option>
@@ -34,31 +47,49 @@
             </div>
             <div class="col-md-4">
                 <select id="sortFilter" class="form-select">
-                    <option value="cijena_asc">Cijena (najniža)</option>
-                    <option value="cijena_desc">Cijena (najviša)</option>
-                    <option value="datum_objave_desc">Najnovije</option>
-                    <option value="datum_objave_asc">Najstarije</option>
+                    <option value="cijena_ASC">Cijena (najniža)</option>
+                    <option value="cijena_DESC">Cijena (najviša)</option>
+                    <option value="datum_objave_DESC">Najnovije</option>
+                    <option value="datum_objave_ASC">Najstarije</option>
                 </select>
             </div>
+            <div class="col-md-6">
+                <input type="number" id="cijenaOdFilter" class="form-control" min="0" step="0.01" placeholder="Min cijena" />
+            </div>
+            <div class="col-md-6">
+                <input type="number" id="cijenaDoFilter" class="form-control" min="0" step="0.01" placeholder="Max cijena" />
+            </div>
         </div>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Naziv</th>
-                    <th>Kategorija</th>
-                    <th>Cijena</th>
-                    <th>Lokacija</th>
-                </tr>
-            </thead>
-            <tbody id="opremaTable">
-                <!-- Popunjava se dinamički -->
-            </tbody>
-        </table>
-        <div class="d-flex justify-content-between">
-            <a href="add.html" class="btn btn-primary">Dodaj Artikal</a>
-            <button id="themeToggle" class="btn btn-secondary">🌙 Tema</button>
+
+        <div class="table-responsive">
+            <table class="table table-striped align-middle text-center">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Naziv</th>
+                        <th>Kategorija</th>
+                        <th>Cijena</th>
+                        <th>Lokacija</th>
+                        <th>Opcije</th>
+                    </tr>
+                </thead>
+                <tbody id="opremaTable">
+                    <!-- Popunjava se iz baze -->
+                </tbody>
+            </table>
         </div>
     </main>
+
+    <!-- Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p>Jesi li siguran da želiš obrisati ovu stavku?</p>
+            <button id="confirmDelete">Obriši</button>
+            <button id="cancelDelete">Otkaži</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="script/script.js"></script>
 </body>
 </html>

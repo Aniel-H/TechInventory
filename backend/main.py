@@ -16,10 +16,10 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'moja_tajna_kljuc')
 CORS(app, resources={r"/*": {"origins": ["http://127.0.0.1:5500"]}}, supports_credentials=True)
 
 db_config = {
-    'host': os.getenv('DB_HOST'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'database': os.getenv('DB_NAME')
+    'host': os.getenv('DB_HOST', '185.202.236.69'),
+    'user': os.getenv('DB_USER', 'aniel'),
+    'password': os.getenv('DB_PASSWORD', 'Aniel2025.'),
+    'database': os.getenv('DB_NAME', 'aniel_DB')
 }
 
 def get_db_connection():
@@ -65,11 +65,9 @@ def signup():
     password = data.get('password')
 
     print(f"Primljeni podaci: email={email}, password={password}")  # Debug
-
     if not email or not password:
         return jsonify({'msg': 'Sva polja su obavezna!', 'status': 'error'}), 400
 
-    # Validacija emaila i lozinke
     import re
     email_regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
     if not re.match(email_regex, email):
@@ -214,8 +212,6 @@ def get_oprema():
         # Dohvati parametre iz zahtjeva
         kategorija = request.args.get('kategorija')
         lokacije_id = request.args.get('lokacije_id')
-        datum_od = request.args.get('datum_od')
-        datum_do = request.args.get('datum_do')
         cijena_od = request.args.get('cijena_od')
         cijena_do = request.args.get('cijena_do')
         sort = request.args.get('sort', 'id')
@@ -244,12 +240,6 @@ def get_oprema():
         if lokacije_id:
             query += " AND o.lokacije_id = %s"
             params.append(lokacije_id)
-        if datum_od:
-            query += " AND o.datum_objave >= %s"
-            params.append(datum_od)
-        if datum_do:
-            query += " AND o.datum_objave <= %s"
-            params.append(f"{datum_do} 23:59:59")  # Uključi kraj dana
         if cijena_od:
             query += " AND o.cijena >= %s"
             params.append(float(cijena_od))
@@ -266,6 +256,7 @@ def get_oprema():
         print(f"Izvršavam upit: {query} sa parametrima: {params}")  # Debug
         cursor.execute(query, params)
         data = cursor.fetchall()
+        print(f"Podaci iz baze: {data}")  # Dodatni debug ispis
         cursor.close()
         conn.close()
         return jsonify({'data': data, 'status': 'success'}), 200
