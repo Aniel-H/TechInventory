@@ -8,3 +8,53 @@ background: -webkit-linear-gradient(to right, rgba(106, 17, 203, 1), rgba(37, 11
 /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
 background: linear-gradient(to right, rgba(106, 17, 203, 1), rgba(37, 117, 252, 1))
 }
+
+.pass {
+    display: flex;
+}
+
+.pass input[type="checkbox"] {
+    transform: scale(2);
+    margin: 16px;
+    align-self: center;
+    border: 0;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+#password {
+  width: 100%;
+  padding-right: 40px; /* prostor za oko */
+  box-sizing: border-box;
+}
+
+#showPassword {
+  display: none;
+}
+
+.eye-icon {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #000;
+  font-size: 18px;
+}
+
+.eye-icon .fa-eye-slash {
+  display: inline;
+}
+.eye-icon .fa-eye {
+  display: none;
+}
+
+/* Kad je checkbox čekiran, prikaži fa-eye, sakrij fa-eye-slash */
+#showPassword:checked + .eye-icon .fa-eye {
+  display: inline;
+}
+#showPassword:checked + .eye-icon .fa-eye-slash {
+  display: none;
+}

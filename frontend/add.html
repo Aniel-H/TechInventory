@@ -58,6 +58,36 @@
       box-sizing: border-box;
     }
 
+    #slika {
+      margin-bottom: 20px;
+      height: 20px;
+      background-color: #f8f8f8;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .status label {
+      margin-right: 10px;
+      font-weight: normal;
+    }
+
+    label[for="status"] {
+      font-size: 1.2rem;
+      margin-right: 5px;
+    }
+
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
     button[type="submit"] {
       width: 100%;
       padding: 10px;
@@ -82,36 +112,44 @@
     <h2>Dodaj Artikal</h2>
 
       <label for="kategorija">Kategorija</label>
-      <select name="kategorija" id="kategorija" required>
-        <option value="">-- Odaberi kategoriju --</option>
+      <select name="kategorija_id" id="kategorija" required>
+        <option value="">-- Nepoznat --</option>
       </select>
 
     <form id="addForm">
 
       <label for="proizvodjac">Proizvođač (opcionalno)</label>
-      <select name="proizvodjac" id="proizvodjac">
+      <select name="proizvodjac_id" id="proizvodjac">
         <option value="">-- Nepoznat --</option>
       </select>
 
       <label for="naziv">Naziv</label>
       <input type="text" id="naziv" name="naziv" required />
 
+      <label for="slika">Slika</label>
+      <input type="file" id="slika" name="slika"/>
+
+      <label for="stanje">Stanje</label>
+      
+      <select name="stanje" id="stanje">
+        <option value="">-- Stanje --</option>
+        <option value="NOVO">NOVO</option>
+        <option value="KORISTENO">Korišteno</option>
+      </select>
+
       <label for="cijena">Cijena</label>
       <input type="number" id="cijena" name="cijena" step="0.01" required />
 
       <label for="lokacija">lokacija</label>
-      <select name="lokacija" id="lokacija">
-        <option value="0">--Odaberite loakciju--</option>
 
-        <option value="1">Teslić</option>
-        <option value="2">Tešanj</option>
-        <option value="3">Sarajevo</option>
-        <option value="4">Zenica</option>
-        <option value="5">Bijeljina</option>
-        <option value="6">Mostar</option>
-        <option value="7">Gradiška</option>
-        <option value="8">Velika Kladuša</option>
+      <select name="lokacije_id" id="lokacija">
+        <option value="0">--Odaberite loakciju--</option>
       </select>
+      
+      <div class="status">
+        <label for="status">Odmah dostupno</label>
+        <input type="checkbox" id="status" name="status" value="1" checked/>
+      </div>
 
       <button type="submit">Dodaj</button>
 
@@ -120,99 +158,6 @@
     </form>
   </div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-  const form = document.getElementById("addForm");
-
-  // Autentifikacija: ako token ne postoji, vrati korisnika
-  const token = localStorage.getItem("auth_token");
-  if (!token) {
-    window.location.href = "login.html";
-    return;
-  }
-
-  // Učitaj kategorije
-  fetch("http://127.0.0.1:5000/kategorije")
-    .then(res => res.json())
-    .then(data => {
-      const select = document.getElementById("kategorija");
-      data.data.forEach(k => {
-        const option = document.createElement("option");
-        option.value = k.id;
-        option.textContent = k.naziv;
-        select.appendChild(option);
-      });
-    });
-
-  // Učitaj proizvođače
-  fetch("http://127.0.0.1:5000/proizvodjaci")
-    .then(res => res.json())
-    .then(data => {
-      const select = document.getElementById("proizvodjac");
-      data.data.forEach(p => {
-        const option = document.createElement("option");
-        option.value = p.id;
-        option.textContent = p.naziv;
-        select.appendChild(option);
-      });
-    });
-
-  // Učitaj lokacije
-  fetch("http://127.0.0.1:5000/lokacije")
-    .then(res => res.json())
-    .then(data => {
-      const select = document.getElementById("lokacija");
-      data.data.forEach(lok => {
-        const option = document.createElement("option");
-        option.value = lok.id;
-        option.textContent = lok.naziv;
-        select.appendChild(option);
-      });
-    });
-
-  form.addEventListener("submit", function (event) {
-    event.preventDefault();
-
-    const naziv = document.getElementById("naziv").value.trim();
-    const kategorija = document.getElementById("kategorija").value;
-    const proizvodjac = document.getElementById("proizvodjac").value || null;
-    const lokacije_id = document.getElementById("lokacija").value;
-    const cijena = parseFloat(document.getElementById("cijena").value);
-
-    if (!naziv || !kategorija || !lokacije_id || isNaN(cijena)) {
-      alert("Sva obavezna polja moraju biti popunjena!");
-      return;
-    }
-
-    fetch("http://127.0.0.1:5000/unos", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token
-      },
-      body: JSON.stringify({
-        naziv,
-        kategorija,
-        cijena,
-        proizvodjac_id: proizvodjac,
-        lokacije_id
-      })
-    })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("poruka").textContent = data.msg || "Artikal uspješno dodan!";
-        form.reset();
-        setTimeout(() => {
-          document.getElementById("poruka").textContent = "";
-        }, 4000);
-      })
-      .catch(err => {
-        console.error("Greška:", err);
-        alert("Greška pri unosu!");
-      });
-  });
-});
-
-  </script>
+  <script src="script/add.js"></script>
 </body>
 </html>
