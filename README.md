@@ -22,12 +22,11 @@ Ova aplikacija koristi sljedeće alate:
 3. Pokrenite instalaciju i **obavezno štiklirajte opciju "Add Python to PATH"**
 4. Kliknite na **Install Now**
 
-### 2. Instaliraj MySQL
+### 2. Instalirajte MySQL
 
-1. Otvorite stranicu: https://dev.mysql.com/downloads/installer/
-2. Preuzmite i pokrenite **MySQL Installer for Windows**
-3. Odaberite **Full installation** ili barem **MySQL Server** i **Workbench**
-4. Postavite root lozinku (npr. `admin123`) i zapamtite je
+1. Otvorite stranicu: https://www.apachefriends.org/
+2. Preuzmite, instalirajte i pokrenite **XAMPP for Windows**
+3. Kliknite START dugme za Apache, a zatim i za MySQL
 
 ### 3. Instalirajte Visual Studio Code (opcionalno)
 
@@ -44,7 +43,7 @@ Ova aplikacija koristi sljedeće alate:
    cd C:\Users\TvojeIme\Documents
 3. git clone https://github.com/Aniel-H/TechInventory.git
 
-## postavljanje baze podataka
+## Postavljanje baze podataka
 
 1. Izvršite skriptu iz /database/db.sql
 2. Podesi /backend/.env file na sljedeći način
@@ -53,3 +52,20 @@ Ova aplikacija koristi sljedeće alate:
     DB_USER=<username>
     DB_PASSWORD=<password>
     DB_NAME=<db_name>
+
+## Pokrenite program
+
+1. U Command Prompt-u navigirajte u /backend 
+    ```bash
+    cd .\backend\
+2. Pokrenite backend (upišite u CMD "python main.py")
+3. Otvorite Visual Studio Code i instalirajte extenziju "Live Server"
+4. Otvorite /frontend i idite na signup.html
+5. U donjem desnom uglu ekrana kliknite na "Go Live"
+
+## Kako se koristi program
+
+1. Napravite novi nalog i prijative se na isti
+2. Idite na "Dodaj Artikal"
+3. Dodajte artikle prateći uputstva sa ekrana
+4. po završetku dodavanja artikala idite na "Pogledaj Artikle"
