@@ -9,7 +9,7 @@ TechInventory je aplikacija za evidenciju tehničke opreme — savršena za ško
 Ova aplikacija koristi sljedeće alate:
 
 - **Python** – za backend
-- **MySQL** – za čuvanje podataka (oprema, kategorije, korisici, lokacije, proizvođači)
+- **MySQL** – za čuvanje podataka (oprema, kategorije, korisnici, lokacije, proizvođači)
 
 ---
 
@@ -65,7 +65,7 @@ Ova aplikacija koristi sljedeće alate:
 
 ## Kako se koristi program
 
-1. Napravite novi nalog i prijative se na isti
+1. Napravite novi nalog i prijavite se na isti
 2. Idite na "Dodaj Artikal"
 3. Dodajte artikle prateći uputstva sa ekrana
 4. po završetku dodavanja artikala idite na "Pogledaj Artikle"
