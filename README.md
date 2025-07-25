@@ -46,7 +46,7 @@ Ova aplikacija koristi sljedeće alate:
 ## Postavljanje baze podataka
 
 1. Izvršite skriptu iz /database/db.sql
-2. Podesi /backend/.env file na sljedeći način
+2. Podesi /backend/.env file na sljedeći način (Zamijenite vrijednosti svojima)
     ```bash
     DB_HOST=localhost
     DB_USER=<username>
